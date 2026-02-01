@@ -1,18 +1,29 @@
-import { TRACK_LENGTH, SPACE_TYPES } from "./board-data.js";
+import { TRACK_LENGTH, SPACES } from "./board-data.js";
 
 function trackToXY(i) {
-  // Rectangle loop layout: 30 spaces around a 10x6 grid perimeter
-  // Top: 0..9, Right: 10..14, Bottom: 15..24, Left: 25..29
-  // Returns grid coords then scaled to pixels.
+  // Rectangle loop layout: 30 spaces around a 10x6 perimeter
   let x, y;
   if (i <= 9) { x = i; y = 0; }
   else if (i <= 14) { x = 9; y = i - 9; }
   else if (i <= 24) { x = 24 - i; y = 5; }
   else { x = 0; y = 29 - i; }
 
-  const px = 50 + x * 55;
-  const py = 50 + y * 55;
+  const px = 55 + x * 55;
+  const py = 60 + y * 55;
   return [px, py];
+}
+
+function shortType(type){
+  switch(type){
+    case "HOME": return "HOME";
+    case "MARKET": return "MARKET";
+    case "VET": return "VET";
+    case "RUNAWAY": return "RUNAWAY";
+    case "ACCIDENT": return "ACCIDENT";
+    case "TIP": return "TIP";
+    case "DONATION": return "DONATION";
+    default: return "";
+  }
 }
 
 export function renderBoard(container, state, onClickSpace) {
@@ -23,7 +34,6 @@ export function renderBoard(container, state, onClickSpace) {
   svg.setAttribute("width", "100%");
   svg.setAttribute("viewBox", "0 0 650 420");
 
-  // background
   const bg = document.createElementNS(svgNS, "rect");
   bg.setAttribute("x", 0);
   bg.setAttribute("y", 0);
@@ -32,24 +42,15 @@ export function renderBoard(container, state, onClickSpace) {
   bg.setAttribute("fill", "#0c1530");
   svg.appendChild(bg);
 
-  // title
-  const t = document.createElementNS(svgNS, "text");
-  t.setAttribute("x", 325);
-  t.setAttribute("y", 35);
-  t.setAttribute("fill", "#e8eefc");
-  t.setAttribute("text-anchor", "middle");
-  t.setAttribute("font-size", "18");
-  t.textContent = "ZOOMAKER TRACK (v1)";
-  svg.appendChild(t);
-
   // spaces
   for (let i = 0; i < TRACK_LENGTH; i++) {
     const [cx, cy] = trackToXY(i);
+    const space = SPACES[i];
 
     const r = document.createElementNS(svgNS, "circle");
     r.setAttribute("cx", cx);
     r.setAttribute("cy", cy);
-    r.setAttribute("r", 18);
+    r.setAttribute("r", 19);
     r.setAttribute("fill", "#1e2a55");
     r.setAttribute("stroke", "#2a3a74");
     r.setAttribute("stroke-width", "2");
@@ -57,24 +58,25 @@ export function renderBoard(container, state, onClickSpace) {
     r.addEventListener("click", () => onClickSpace(i));
     svg.appendChild(r);
 
-    const label = document.createElementNS(svgNS, "text");
-    label.setAttribute("x", cx);
-    label.setAttribute("y", cy + 5);
-    label.setAttribute("fill", "#fff");
-    label.setAttribute("text-anchor", "middle");
-    label.setAttribute("font-size", "12");
-    label.textContent = String(i);
-    svg.appendChild(label);
+    const n = document.createElementNS(svgNS, "text");
+    n.setAttribute("x", cx);
+    n.setAttribute("y", cy + 5);
+    n.setAttribute("fill", "#fff");
+    n.setAttribute("text-anchor", "middle");
+    n.setAttribute("font-size", "12");
+    n.textContent = String(i);
+    svg.appendChild(n);
 
-    if (SPACE_TYPES[i]) {
-      const tag = document.createElementNS(svgNS, "text");
-      tag.setAttribute("x", cx);
-      tag.setAttribute("y", cy + 34);
-      tag.setAttribute("fill", "#a9b7ff");
-      tag.setAttribute("text-anchor", "middle");
-      tag.setAttribute("font-size", "10");
-      tag.textContent = SPACE_TYPES[i];
-      svg.appendChild(tag);
+    const tag = shortType(space.type);
+    if (tag) {
+      const t = document.createElementNS(svgNS, "text");
+      t.setAttribute("x", cx);
+      t.setAttribute("y", cy + 34);
+      t.setAttribute("fill", "#a9b7ff");
+      t.setAttribute("text-anchor", "middle");
+      t.setAttribute("font-size", "9");
+      t.textContent = tag;
+      svg.appendChild(t);
     }
   }
 
@@ -85,10 +87,10 @@ export function renderBoard(container, state, onClickSpace) {
     const [cx, cy] = trackToXY(pos);
 
     const pawn = document.createElementNS(svgNS, "circle");
-    pawn.setAttribute("cx", cx + (idx % 3) * 10 - 10);
-    pawn.setAttribute("cy", cy - 28 - Math.floor(idx / 3) * 10);
+    pawn.setAttribute("cx", cx + (idx % 3) * 12 - 12);
+    pawn.setAttribute("cy", cy - 30 - Math.floor(idx / 3) * 12);
     pawn.setAttribute("r", 8);
-    pawn.setAttribute("fill", "#ff3b3b");
+    pawn.setAttribute("fill", idx === 0 ? "#ff3b3b" : "#ff9f1a"); // two-player friendly
     svg.appendChild(pawn);
   });
 
