@@ -1,73 +1,43 @@
-* {
-    box-sizing: border-box;
-  }
-  
-  body {
-    margin: 0;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-    background: #0b1220;
-    color: #e8eefc;
-  }
-  
-  header {
-    padding: 16px;
-    background: #111a33;
-    border-bottom: 1px solid #223;
-  }
-  
-  h1 {
-    margin: 0 0 6px 0;
-  }
-  
-  #status {
-    font-size: 14px;
-    color: #9fb2ff;
-  }
-  
-  .card {
-    margin: 16px;
-    padding: 16px;
-    background: #111a33;
-    border-radius: 12px;
-    border: 1px solid #223;
-  }
-  
-  button {
-    background: #2b5cff;
-    color: #fff;
-    border: none;
-    padding: 10px 14px;
-    border-radius: 8px;
-    margin-right: 6px;
-    cursor: pointer;
-  }
-  
-  button:disabled {
-    opacity: 0.5;
-  }
-  
-  input {
-    padding: 8px;
-    border-radius: 6px;
-    border: 1px solid #334;
-    background: #0b1220;
-    color: #e8eefc;
-  }
-  
-  .small {
-    margin-top: 8px;
-    font-size: 13px;
-    color: #9aa8d8;
-  }
-  
-  #board {
-    margin-top: 12px;
-  }
-  
-  pre {
-    background: #0b1220;
-    padding: 10px;
-    border-radius: 8px;
-    min-height: 60px;
-    overflow-x: auto;
-  }
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #0b1220;
+  color: #e8eefc;
+}
+
+header {
+  padding: 16px;
+  background: #111a33;
+}
+
+.card {
+  margin: 16px;
+  padding: 16px;
+  background: #111a33;
+  border-radius: 12px;
+}
+
+button {
+  padding: 10px 14px;
+  margin-right: 6px;
+  border-radius: 8px;
+  border: none;
+  background: #2b5cff;
+  color: #fff;
+}
+
+input {
+  padding: 8px;
+  border-radius: 6px;
+}
+
+#board {
+  margin-top: 12px;
+}
+
+pre {
+  background: #000;
+  padding: 10px;
+  min-height: 80px;
+  white-space: pre-wrap;
+}
