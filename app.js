@@ -12,7 +12,7 @@ import {
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 import { firebaseConfig } from "./firebase-config.js";
-import { renderBoard } from "./board-render.js";
+import { renderBoard } from "./board-render.js?v=7";
 import { TRACK_LENGTH, getSpace, ANIMALS } from "./board-data.js";
 
 // UI
