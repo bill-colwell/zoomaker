@@ -1,8 +1,7 @@
 import { TRACK_LENGTH, SPACES } from "./board-data.js";
 
-const RENDER_VERSION = "PICKUP+ZOO-1";
+const RENDER_VERSION = "PICKUP+ZOO-4";
 
-// Colors for up to 6 players
 const BODY_COLORS = ["#ff3b3b", "#ff9f1a", "#34c759", "#32ade6", "#af52de", "#ffd60a"];
 const CAB_COLORS  = ["#ff6b6b", "#ffc266", "#6eea94", "#7ad7ff", "#d7a6ff", "#fff2a8"];
 
@@ -22,89 +21,66 @@ function edgeForSpace(i) {
   return "LEFT";
 }
 
+function shortType(type) {
+  switch (type) {
+    case "HOME": return "HOME";
+    case "MARKET": return "MARKET";
+    case "VET": return "VET";
+    case "RUNAWAY": return "RUNAWAY";
+    case "ACCIDENT": return "ACCIDENT";
+    case "TIP": return "TIP";
+    case "DONATION": return "DONATION";
+    case "ZOO_ZONE": return "ZOO";
+    default: return "";
+  }
+}
+
 function drawPickup(svg, svgNS, x, y, edge, bodyColor, cabColor) {
   const g = document.createElementNS(svgNS, "g");
 
-  // Keep upright on all sides:
-  if (edge === "TOP") {
-    g.setAttribute("transform", `translate(${x}, ${y}) translate(0, -2)`);
-  } else if (edge === "RIGHT") {
-    g.setAttribute("transform", `translate(${x}, ${y}) rotate(90) translate(0, -2)`);
-  } else if (edge === "BOTTOM") {
-    g.setAttribute("transform", `translate(${x}, ${y}) scale(-1, 1) translate(0, -2)`);
-  } else {
-    g.setAttribute("transform", `translate(${x}, ${y}) rotate(270) translate(0, -2)`);
-  }
+  if (edge === "TOP") g.setAttribute("transform", `translate(${x}, ${y}) translate(0, -2)`);
+  else if (edge === "RIGHT") g.setAttribute("transform", `translate(${x}, ${y}) rotate(90) translate(0, -2)`);
+  else if (edge === "BOTTOM") g.setAttribute("transform", `translate(${x}, ${y}) scale(-1, 1) translate(0, -2)`);
+  else g.setAttribute("transform", `translate(${x}, ${y}) rotate(270) translate(0, -2)`);
 
-  // Bed
   const bed = document.createElementNS(svgNS, "rect");
-  bed.setAttribute("x", -18);
-  bed.setAttribute("y", 0);
-  bed.setAttribute("width", 14);
-  bed.setAttribute("height", 8);
-  bed.setAttribute("rx", 2);
-  bed.setAttribute("fill", bodyColor);
+  bed.setAttribute("x", -18); bed.setAttribute("y", 0);
+  bed.setAttribute("width", 14); bed.setAttribute("height", 8);
+  bed.setAttribute("rx", 2); bed.setAttribute("fill", bodyColor);
 
-  // Cab
   const cab = document.createElementNS(svgNS, "rect");
-  cab.setAttribute("x", -4);
-  cab.setAttribute("y", -6);
-  cab.setAttribute("width", 16);
-  cab.setAttribute("height", 14);
-  cab.setAttribute("rx", 3);
-  cab.setAttribute("fill", cabColor);
+  cab.setAttribute("x", -4); cab.setAttribute("y", -6);
+  cab.setAttribute("width", 16); cab.setAttribute("height", 14);
+  cab.setAttribute("rx", 3); cab.setAttribute("fill", cabColor);
 
-  // Hood
   const hood = document.createElementNS(svgNS, "rect");
-  hood.setAttribute("x", 12);
-  hood.setAttribute("y", 0);
-  hood.setAttribute("width", 10);
-  hood.setAttribute("height", 8);
-  hood.setAttribute("rx", 2);
-  hood.setAttribute("fill", bodyColor);
+  hood.setAttribute("x", 12); hood.setAttribute("y", 0);
+  hood.setAttribute("width", 10); hood.setAttribute("height", 8);
+  hood.setAttribute("rx", 2); hood.setAttribute("fill", bodyColor);
 
-  // Windshield forward
   const win = document.createElementNS(svgNS, "rect");
-  win.setAttribute("x", 3);
-  win.setAttribute("y", -4);
-  win.setAttribute("width", 8);
-  win.setAttribute("height", 5);
-  win.setAttribute("rx", 1);
-  win.setAttribute("fill", "#d9ecff");
+  win.setAttribute("x", 3); win.setAttribute("y", -4);
+  win.setAttribute("width", 8); win.setAttribute("height", 5);
+  win.setAttribute("rx", 1); win.setAttribute("fill", "#d9ecff");
 
-  // Wheels
   const w1 = document.createElementNS(svgNS, "circle");
-  w1.setAttribute("cx", -10);
-  w1.setAttribute("cy", 10);
-  w1.setAttribute("r", 4);
-  w1.setAttribute("fill", "#111");
+  w1.setAttribute("cx", -10); w1.setAttribute("cy", 10);
+  w1.setAttribute("r", 4); w1.setAttribute("fill", "#111");
 
   const w2 = document.createElementNS(svgNS, "circle");
-  w2.setAttribute("cx", 12);
-  w2.setAttribute("cy", 10);
-  w2.setAttribute("r", 4);
-  w2.setAttribute("fill", "#111");
+  w2.setAttribute("cx", 12); w2.setAttribute("cy", 10);
+  w2.setAttribute("r", 4); w2.setAttribute("fill", "#111");
 
-  g.appendChild(bed);
-  g.appendChild(cab);
-  g.appendChild(hood);
-  g.appendChild(win);
-  g.appendChild(w1);
-  g.appendChild(w2);
-
+  g.appendChild(bed); g.appendChild(cab); g.appendChild(hood);
+  g.appendChild(win); g.appendChild(w1); g.appendChild(w2);
   svg.appendChild(g);
 }
 
 function drawZooTiles(svg, svgNS, state) {
-  // center area positions (2 rows of 3)
-  const startX = 205;
-  const startY = 140;
-  const tileW = 120;
-  const tileH = 70;
-  const gapX = 20;
-  const gapY = 18;
+  const startX = 140, startY = 135;
+  const tileW = 110, tileH = 62;
+  const gapX = 14, gapY = 14;
 
-  // Map zooIndex -> player
   const players = state.players || [];
   const byZoo = new Map();
   for (let i = 0; i < players.length; i++) {
@@ -119,10 +95,8 @@ function drawZooTiles(svg, svgNS, state) {
     const y = startY + row * (tileH + gapY);
 
     const tile = document.createElementNS(svgNS, "rect");
-    tile.setAttribute("x", x);
-    tile.setAttribute("y", y);
-    tile.setAttribute("width", tileW);
-    tile.setAttribute("height", tileH);
+    tile.setAttribute("x", x); tile.setAttribute("y", y);
+    tile.setAttribute("width", tileW); tile.setAttribute("height", tileH);
     tile.setAttribute("rx", 12);
     tile.setAttribute("fill", "#0c1530");
     tile.setAttribute("stroke", "#2a3a74");
@@ -130,8 +104,7 @@ function drawZooTiles(svg, svgNS, state) {
     svg.appendChild(tile);
 
     const label = document.createElementNS(svgNS, "text");
-    label.setAttribute("x", x + 10);
-    label.setAttribute("y", y + 22);
+    label.setAttribute("x", x + 10); label.setAttribute("y", y + 20);
     label.setAttribute("fill", "#e8eefc");
     label.setAttribute("font-size", "13");
     label.textContent = `Zoo ${z + 1}`;
@@ -140,6 +113,7 @@ function drawZooTiles(svg, svgNS, state) {
     const owner = byZoo.get(z);
     if (owner) {
       const bodyColor = BODY_COLORS[owner.playerIdx % BODY_COLORS.length];
+
       const badge = document.createElementNS(svgNS, "circle");
       badge.setAttribute("cx", x + tileW - 18);
       badge.setAttribute("cy", y + 18);
@@ -150,7 +124,7 @@ function drawZooTiles(svg, svgNS, state) {
       const animals = owner.player.animals || 0;
       const info = document.createElementNS(svgNS, "text");
       info.setAttribute("x", x + 10);
-      info.setAttribute("y", y + 46);
+      info.setAttribute("y", y + 44);
       info.setAttribute("fill", "#a9b7ff");
       info.setAttribute("font-size", "12");
       info.textContent = `Animals: ${animals}`;
@@ -158,7 +132,7 @@ function drawZooTiles(svg, svgNS, state) {
     } else {
       const empty = document.createElementNS(svgNS, "text");
       empty.setAttribute("x", x + 10);
-      empty.setAttribute("y", y + 46);
+      empty.setAttribute("y", y + 44);
       empty.setAttribute("fill", "#6d7bb0");
       empty.setAttribute("font-size", "12");
       empty.textContent = `Empty`;
@@ -176,22 +150,18 @@ export function renderBoard(container, state, onClickSpace) {
   svg.setAttribute("viewBox", "0 0 650 420");
 
   const bg = document.createElementNS(svgNS, "rect");
-  bg.setAttribute("x", 0);
-  bg.setAttribute("y", 0);
-  bg.setAttribute("width", 650);
-  bg.setAttribute("height", 420);
+  bg.setAttribute("x", 0); bg.setAttribute("y", 0);
+  bg.setAttribute("width", 650); bg.setAttribute("height", 420);
   bg.setAttribute("fill", "#0c1530");
   svg.appendChild(bg);
 
   const ver = document.createElementNS(svgNS, "text");
-  ver.setAttribute("x", 12);
-  ver.setAttribute("y", 18);
+  ver.setAttribute("x", 12); ver.setAttribute("y", 18);
   ver.setAttribute("fill", "#a9b7ff");
   ver.setAttribute("font-size", "12");
   ver.textContent = `Renderer: ${RENDER_VERSION}`;
   svg.appendChild(ver);
 
-  // spaces
   for (let i = 0; i < TRACK_LENGTH; i++) {
     const [cx, cy] = trackToXY(i);
     const space = SPACES[i];
@@ -199,7 +169,7 @@ export function renderBoard(container, state, onClickSpace) {
     const r = document.createElementNS(svgNS, "circle");
     r.setAttribute("cx", cx);
     r.setAttribute("cy", cy);
-    r.setAttribute("r", 19);
+    r.setAttribute("r", 24);               // ✅ bigger
     r.setAttribute("fill", "#1e2a55");
     r.setAttribute("stroke", "#2a3a74");
     r.setAttribute("stroke-width", "2");
@@ -209,18 +179,29 @@ export function renderBoard(container, state, onClickSpace) {
 
     const n = document.createElementNS(svgNS, "text");
     n.setAttribute("x", cx);
-    n.setAttribute("y", cy + 5);
+    n.setAttribute("y", cy + 6);
     n.setAttribute("fill", "#fff");
     n.setAttribute("text-anchor", "middle");
-    n.setAttribute("font-size", "12");
+    n.setAttribute("font-size", "13");
     n.textContent = String(i);
     svg.appendChild(n);
 
-    // Mark Zoo Visit Zones with a "Z"
+    const tag = shortType(space?.type);
+    if (tag) {
+      const t = document.createElementNS(svgNS, "text");
+      t.setAttribute("x", cx);
+      t.setAttribute("y", cy + 44);        // ✅ moved down for bigger circle
+      t.setAttribute("fill", "#a9b7ff");
+      t.setAttribute("text-anchor", "middle");
+      t.setAttribute("font-size", "9");
+      t.textContent = tag;
+      svg.appendChild(t);
+    }
+
     if (space?.type === "ZOO_ZONE") {
       const z = document.createElementNS(svgNS, "text");
       z.setAttribute("x", cx);
-      z.setAttribute("y", cy - 24);
+      z.setAttribute("y", cy - 32);        // ✅ moved up a bit
       z.setAttribute("fill", "#ffd60a");
       z.setAttribute("text-anchor", "middle");
       z.setAttribute("font-size", "12");
@@ -229,24 +210,20 @@ export function renderBoard(container, state, onClickSpace) {
     }
   }
 
-  // center zoo tiles
   drawZooTiles(svg, svgNS, state);
 
-  // pickups (player pawns)
   const players = state.players || [];
   players.forEach((p, idx) => {
     const pos = Number.isInteger(p.pos) ? p.pos : 0;
     const [cx, cy] = trackToXY(pos);
 
     const offsetX = (idx % 3) * 18 - 18;
-    const offsetY = -46 - Math.floor(idx / 3) * 18;
-
-    const edge = edgeForSpace(pos);
+    const offsetY = -56 - Math.floor(idx / 3) * 18; // ✅ a bit higher
 
     drawPickup(
       svg, svgNS,
       cx + offsetX, cy + offsetY,
-      edge,
+      edgeForSpace(pos),
       BODY_COLORS[idx % BODY_COLORS.length],
       CAB_COLORS[idx % CAB_COLORS.length]
     );
