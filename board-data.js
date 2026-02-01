@@ -1,17 +1,18 @@
 export const TRACK_LENGTH = 30;
 
-// Space definitions (Zoomaker-flavored v1)
+// Spaces (v1)
 export const SPACES = Array.from({ length: TRACK_LENGTH }, (_, i) => ({
   id: i,
   name: `Path ${i}`,
-  type: "PATH"
+  type: "PATH",
+  data: {}
 }));
 
-// Key spaces
 function setSpace(i, name, type, data = {}) {
   SPACES[i] = { id: i, name, type, data };
 }
 
+// A few Zoomaker-flavored spaces (keep what you had)
 setSpace(0,  "HOME GATE",        "HOME");
 setSpace(3,  "TIP JAR",          "TIP",      { amount: 75 });
 setSpace(5,  "ANIMAL MARKET",    "MARKET");
@@ -25,7 +26,11 @@ setSpace(22, "TIP JAR",          "TIP",      { amount: 100 });
 setSpace(25, "VET CLINIC",       "VET",      { amount: 160 });
 setSpace(27, "RUNAWAY!",         "RUNAWAY",  { amount: 180 });
 
-// Animal offers (simple tiered costs)
+// ✅ Zoo Visit Zones (land here → random visit another player's zoo)
+setSpace(8,  "ZOO VISIT ZONE",   "ZOO_ZONE");
+setSpace(23, "ZOO VISIT ZONE",   "ZOO_ZONE");
+
+// Animal offers (same simple tiered costs)
 export const ANIMALS = [
   { name: "Meerkat",    cost: 120, tier: 1 },
   { name: "Penguin",    cost: 160, tier: 1 },
