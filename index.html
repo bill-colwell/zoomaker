@@ -1,50 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Zoomaker</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<header>
+<header class="topbar">
   <h1>ZOOMAKER</h1>
   <div id="status">Loading…</div>
 </header>
 
 <section class="card">
-  <button id="createGame">Create Game</button>
-  <input id="gameCodeInput" placeholder="Game code" autocapitalize="characters" />
-  <button id="joinGame">Join Game</button>
-</section>
-
-<section class="card">
   <div class="row">
-    <button id="rollDice">Roll Dice</button>
-    <div class="pill">Dice: <span id="diceReadout">—</span></div>
-    <div class="pill">Turn: <span id="turnReadout">—</span></div>
-    <div class="pill">Money: $<span id="moneyReadout">—</span></div>
-    <div class="pill">Animals: <span id="animalsReadout">—</span></div>
-  </div>
-</section>
+    <button id="createGame">Create Game</button>
 
-<section class="card">
-  <h2>Event</h2>
-  <div id="eventBox" class="eventBox">
-    <div class="eventTitle" id="eventTitle">—</div>
-    <div class="eventBody" id="eventBody">Create or join a game, then roll dice.</div>
+    <input id="gameCodeInput" placeholder="Game code" autocapitalize="characters" />
+
+    <button id="joinGame">Join Game</button>
   </div>
 
-  <div class="row" style="margin-top:12px;">
-    <button id="buyAnimal" disabled>Buy Animal</button>
-    <button id="skipAnimal" disabled>Skip</button>
-  </div>
+  <div class="small" id="gameMeta">—</div>
 </section>
 
 <section class="card">
   <h2>Board</h2>
   <div id="board"></div>
+
+  <!-- ✅ Board controls live under the board now -->
+  <div class="board-controls">
+    <div class="zoo-stats">
+      <div class="stat"><span class="label">Your Zoo</span> <span id="yourZoo">—</span></div>
+      <div class="stat"><span class="label">Money</span> $<span id="money">—</span></div>
+      <div class="stat"><span class="label">Animals</span> <span id="animals">—</span></div>
+    </div>
+
+    <div class="dice-area">
+      <div class="dice" id="die1"><span class="pip">•</span></div>
+      <div class="dice" id="die2"><span class="pip">•</span></div>
+      <button id="rollDiceBtn">Roll</button>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h2 id="eventTitle">—</h2>
+  <div id="eventBody" class="eventBody">—</div>
+
+  <div class="row" style="margin-top:12px;">
+    <button id="buyAnimal" disabled>Buy</button>
+    <button id="skipAnimal" disabled>Skip</button>
+  </div>
 </section>
 
 <section class="card">
