@@ -1,6 +1,6 @@
 import { TRACK_LENGTH, SPACES } from "./board-data.js";
 
-const RENDER_VERSION = "PICKUP+ZOO-4";
+const RENDER_VERSION = "PICKUP+ZOO-5";
 
 const BODY_COLORS = ["#ff3b3b", "#ff9f1a", "#34c759", "#32ade6", "#af52de", "#ffd60a"];
 const CAB_COLORS  = ["#ff6b6b", "#ffc266", "#6eea94", "#7ad7ff", "#d7a6ff", "#fff2a8"];
@@ -21,6 +21,7 @@ function edgeForSpace(i) {
   return "LEFT";
 }
 
+// Short label shown near special spaces
 function shortType(type) {
   switch (type) {
     case "HOME": return "HOME";
@@ -33,6 +34,15 @@ function shortType(type) {
     case "ZOO_ZONE": return "ZOO";
     default: return "";
   }
+}
+
+// Position label beside the circle depending on which edge it sits on
+function labelPos(cx, cy, edge) {
+  const pad = 34; // how far away from the circle center to place label
+  if (edge === "TOP")    return { x: cx,        y: cy - pad, anchor: "middle" };
+  if (edge === "BOTTOM") return { x: cx,        y: cy + pad + 10, anchor: "middle" };
+  if (edge === "RIGHT")  return { x: cx + pad,  y: cy + 4, anchor: "start" };
+  return                  { x: cx - pad,  y: cy + 4, anchor: "end" };
 }
 
 function drawPickup(svg, svgNS, x, y, edge, bodyColor, cabColor) {
@@ -165,11 +175,12 @@ export function renderBoard(container, state, onClickSpace) {
   for (let i = 0; i < TRACK_LENGTH; i++) {
     const [cx, cy] = trackToXY(i);
     const space = SPACES[i];
+    const edge = edgeForSpace(i);
 
     const r = document.createElementNS(svgNS, "circle");
     r.setAttribute("cx", cx);
     r.setAttribute("cy", cy);
-    r.setAttribute("r", 24);               // ✅ bigger
+    r.setAttribute("r", 24);
     r.setAttribute("fill", "#1e2a55");
     r.setAttribute("stroke", "#2a3a74");
     r.setAttribute("stroke-width", "2");
@@ -188,12 +199,14 @@ export function renderBoard(container, state, onClickSpace) {
 
     const tag = shortType(space?.type);
     if (tag) {
+      const lp = labelPos(cx, cy, edge);
+
       const t = document.createElementNS(svgNS, "text");
-      t.setAttribute("x", cx);
-      t.setAttribute("y", cy + 44);        // ✅ moved down for bigger circle
+      t.setAttribute("x", lp.x);
+      t.setAttribute("y", lp.y);
       t.setAttribute("fill", "#a9b7ff");
-      t.setAttribute("text-anchor", "middle");
-      t.setAttribute("font-size", "9");
+      t.setAttribute("text-anchor", lp.anchor);
+      t.setAttribute("font-size", "10");
       t.textContent = tag;
       svg.appendChild(t);
     }
@@ -201,7 +214,7 @@ export function renderBoard(container, state, onClickSpace) {
     if (space?.type === "ZOO_ZONE") {
       const z = document.createElementNS(svgNS, "text");
       z.setAttribute("x", cx);
-      z.setAttribute("y", cy - 32);        // ✅ moved up a bit
+      z.setAttribute("y", cy - 32);
       z.setAttribute("fill", "#ffd60a");
       z.setAttribute("text-anchor", "middle");
       z.setAttribute("font-size", "12");
@@ -216,14 +229,15 @@ export function renderBoard(container, state, onClickSpace) {
   players.forEach((p, idx) => {
     const pos = Number.isInteger(p.pos) ? p.pos : 0;
     const [cx, cy] = trackToXY(pos);
+    const edge = edgeForSpace(pos);
 
     const offsetX = (idx % 3) * 18 - 18;
-    const offsetY = -56 - Math.floor(idx / 3) * 18; // ✅ a bit higher
+    const offsetY = -56 - Math.floor(idx / 3) * 18;
 
     drawPickup(
       svg, svgNS,
       cx + offsetX, cy + offsetY,
-      edgeForSpace(pos),
+      edge,
       BODY_COLORS[idx % BODY_COLORS.length],
       CAB_COLORS[idx % CAB_COLORS.length]
     );
