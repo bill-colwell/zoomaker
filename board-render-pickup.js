@@ -5,6 +5,13 @@ const RENDER_VERSION = "PICKUP-FILE-1";
 const BODY_COLORS = ["#ff3b3b", "#ff9f1a", "#34c759", "#32ade6", "#af52de", "#ffd60a"];
 const CAB_COLORS  = ["#ff6b6b", "#ffc266", "#6eea94", "#7ad7ff", "#d7a6ff", "#fff2a8"];
 
+function headingForSpace(i) {
+  if (i <= 9) return 0;       // top row → right
+  if (i <= 14) return 90;     // right column → down
+  if (i <= 24) return 180;    // bottom row → left
+  return 270;                 // left column → up
+}
+
 function trackToXY(i) {
   let x, y;
   if (i <= 9) { x = i; y = 0; }
@@ -15,10 +22,11 @@ function trackToXY(i) {
   return [55 + x * 55, 60 + y * 55];
 }
 
-function drawPickup(svg, svgNS, x, y, bodyColor, cabColor) {
+function drawPickup(svg, svgNS, x, y, deg, bodyColor, cabColor) {
   const g = document.createElementNS(svgNS, "g");
-  g.setAttribute("transform", `translate(${x}, ${y})`);
-
+  g.setAttribute("transform", `translate(${x}, ${y}) rotate(${deg})`);
+  ...
+}
   const bed = document.createElementNS(svgNS, "rect");
   bed.setAttribute("x", -18);
   bed.setAttribute("y", 0);
