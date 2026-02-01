@@ -6,14 +6,16 @@ import {
   getDoc,
   updateDoc,
   onSnapshot,
+  runTransaction,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 import { firebaseConfig } from "./firebase-config.js";
 import { renderBoard } from "./board-render.js";
+import { TRACK_LENGTH } from "./board-data.js";
 
-// ---------- UI ----------
+// UI
 const statusEl = document.getElementById("status");
 const logEl = document.getElementById("log");
 const boardEl = document.getElementById("board");
@@ -22,103 +24,104 @@ const btnCreate = document.getElementById("createGame");
 const btnJoin = document.getElementById("joinGame");
 const joinInput = document.getElementById("gameCodeInput");
 
+const btnRoll = document.getElementById("rollDice");
+const diceReadout = document.getElementById("diceReadout");
+const turnReadout = document.getElementById("turnReadout");
+
 function log(msg) {
   if (!logEl) return;
   logEl.textContent = msg + "\n" + logEl.textContent;
 }
 
-// ---------- Firebase ----------
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
 let playerId = null;
-let currentGameId = null;
-let unsubscribe = null;
+let gameId = null;
+let unsub = null;
+let lastState = null;
 
-// ---------- Helpers ----------
+function setEnabled(on) {
+  btnCreate.disabled = !on;
+  btnJoin.disabled = !on;
+  joinInput.disabled = !on;
+  btnRoll.disabled = !on;
+}
+
 function makeGameCode() {
-  // readable code (no O/0, I/1 confusion)
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let out = "";
   for (let i = 0; i < 4; i++) out += chars[Math.floor(Math.random() * chars.length)];
   return out;
 }
 
-function setButtonsEnabled(enabled) {
-  btnCreate.disabled = !enabled;
-  btnJoin.disabled = !enabled;
-  joinInput.disabled = !enabled;
+function currentTurnPlayer(state) {
+  const players = state.players || [];
+  const idx = state.turnIndex || 0;
+  return players[idx] || null;
 }
 
-// Render something even before game exists (optional)
-function renderIdleBoard() {
-  renderBoard(boardEl, { players: [{ id: "idle", tileId: 0 }] }, () => {});
-}
+function watchGame(id) {
+  if (unsub) unsub();
+  gameId = id;
 
-// ---------- Game sync ----------
-function watchGame(gameId) {
-  if (unsubscribe) unsubscribe();
-  currentGameId = gameId;
+  const ref = doc(db, "games", gameId);
 
-  const ref = doc(db, "games", currentGameId);
-
-  unsubscribe = onSnapshot(ref, (snap) => {
+  unsub = onSnapshot(ref, (snap) => {
     if (!snap.exists()) {
-      statusEl.textContent = `Game ${currentGameId} not found`;
-      log(`Game ${currentGameId} not found`);
+      statusEl.textContent = `Game ${gameId} not found`;
       return;
     }
 
     const state = snap.data();
-    statusEl.textContent = `Connected • Game ${currentGameId} • Players: ${(state.players || []).length}`;
+    lastState = state;
 
-    // Render board from Firestore state ONLY
-    renderBoard(boardEl, state, async (tileId) => {
-      // Move ONLY your pawn
-      const players = [...(state.players || [])];
-      const idx = players.findIndex(p => p.id === playerId);
-      if (idx < 0) return;
+    const players = state.players || [];
+    const turnP = currentTurnPlayer(state);
 
-      players[idx] = { ...players[idx], tileId };
-      await updateDoc(ref, { players });
-      log(`Moved to tile ${tileId}`);
+    statusEl.textContent = `Connected • Game ${gameId} • Players: ${players.length}`;
+    turnReadout.textContent = turnP ? (turnP.id === playerId ? "Your turn" : "Other player") : "—";
+    diceReadout.textContent = state.lastDice ? `${state.lastDice.d1} + ${state.lastDice.d2} = ${state.lastDice.total}` : "—";
+
+    renderBoard(boardEl, state, async (spaceId) => {
+      // Optional click-to-move (debug): only allow on your turn
+      if (!turnP || turnP.id !== playerId) return;
+      await movePlayerTo(spaceId);
     });
   });
 
-  log(`Watching game ${currentGameId}`);
+  log(`Watching game ${gameId}`);
 }
 
-// ---------- Actions ----------
 async function createGame() {
-  // Generate a code and ensure it doesn't already exist (simple retry)
   let code = makeGameCode();
-  for (let tries = 0; tries < 5; tries++) {
-    const existing = await getDoc(doc(db, "games", code));
-    if (!existing.exists()) break;
+  for (let tries = 0; tries < 8; tries++) {
+    const exists = await getDoc(doc(db, "games", code));
+    if (!exists.exists()) break;
     code = makeGameCode();
   }
 
   const ref = doc(db, "games", code);
 
-  const newState = {
+  const state = {
     createdAt: serverTimestamp(),
-    version: 1,
-    players: [
-      { id: playerId, tileId: 0, money: 1500, tierPoints: 0, carrying: null }
-    ]
+    version: 2,
+    players: [{ id: playerId, pos: 0, money: 1500 }],
+    turnIndex: 0,
+    lastDice: null
   };
 
-  await setDoc(ref, newState);
-  joinInput.value = code; // show it in the input box
-  log(`Created game: ${code}`);
+  await setDoc(ref, state);
+  joinInput.value = code;
+  log(`Created game ${code}`);
   watchGame(code);
 }
 
 async function joinGame() {
   const code = (joinInput.value || "").trim().toUpperCase();
   if (!code) {
-    alert("Enter a game code first.");
+    alert("Enter a game code.");
     return;
   }
 
@@ -126,7 +129,7 @@ async function joinGame() {
   const snap = await getDoc(ref);
 
   if (!snap.exists()) {
-    alert("Game not found. Check the code.");
+    alert("Game not found.");
     return;
   }
 
@@ -135,34 +138,104 @@ async function joinGame() {
 
   if (!players.some(p => p.id === playerId)) {
     if (players.length >= 6) {
-      alert("Game is full (max 6 players).");
+      alert("Game full (max 6).");
       return;
     }
-    players.push({ id: playerId, tileId: 0, money: 1500, tierPoints: 0, carrying: null });
+    players.push({ id: playerId, pos: 0, money: 1500 });
     await updateDoc(ref, { players });
-    log(`Joined game: ${code}`);
+    log(`Joined game ${code}`);
   } else {
-    log(`Rejoined game: ${code}`);
+    log(`Rejoined game ${code}`);
   }
 
   watchGame(code);
 }
 
-// ---------- Boot ----------
+async function movePlayerTo(spaceId) {
+  if (!gameId) return;
+  const ref = doc(db, "games", gameId);
+
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+
+    const state = snap.data();
+    const players = [...(state.players || [])];
+    const turnP = currentTurnPlayer(state);
+    if (!turnP || turnP.id !== playerId) return;
+
+    const idx = players.findIndex(p => p.id === playerId);
+    if (idx < 0) return;
+
+    players[idx] = { ...players[idx], pos: spaceId };
+    tx.update(ref, { players });
+  });
+
+  log(`Moved to space ${spaceId}`);
+}
+
+async function rollDice() {
+  if (!gameId) {
+    alert("Create or join a game first.");
+    return;
+  }
+
+  const ref = doc(db, "games", gameId);
+
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+
+    const state = snap.data();
+    const players = [...(state.players || [])];
+    if (players.length === 0) return;
+
+    const turnP = currentTurnPlayer(state);
+    if (!turnP || turnP.id !== playerId) {
+      // Not your turn
+      return;
+    }
+
+    const d1 = 1 + Math.floor(Math.random() * 6);
+    const d2 = 1 + Math.floor(Math.random() * 6);
+    const total = d1 + d2;
+
+    const idx = players.findIndex(p => p.id === playerId);
+    const cur = Number.isInteger(players[idx].pos) ? players[idx].pos : 0;
+    const next = (cur + total) % TRACK_LENGTH;
+
+    players[idx] = { ...players[idx], pos: next };
+
+    // advance turn
+    const nextTurn = (state.turnIndex + 1) % players.length;
+
+    tx.update(ref, {
+      players,
+      turnIndex: nextTurn,
+      lastDice: { d1, d2, total, by: playerId }
+    });
+  });
+
+  log("Rolled dice");
+}
+
+// boot
 statusEl.textContent = "Signing in…";
-setButtonsEnabled(false);
-renderIdleBoard();
+setEnabled(false);
+
+// show placeholder board before game
+renderBoard(boardEl, { players: [{ id: "idle", pos: 0 }] }, () => {});
 
 signInAnonymously(auth)
   .then((res) => {
     playerId = res.user.uid;
     statusEl.textContent = "Connected (anonymous) • Ready";
     log("Signed in ✅");
-
-    setButtonsEnabled(true);
+    setEnabled(true);
 
     btnCreate.onclick = () => createGame().catch(e => log("CREATE ERROR: " + e.message));
     btnJoin.onclick = () => joinGame().catch(e => log("JOIN ERROR: " + e.message));
+    btnRoll.onclick = () => rollDice().catch(e => log("DICE ERROR: " + e.message));
   })
   .catch((err) => {
     statusEl.textContent = `Auth error: ${err.code}`;
