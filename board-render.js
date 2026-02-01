@@ -80,7 +80,7 @@ export function renderBoard(container, state, onClickSpace) {
     }
   }
 
-  // pawns
+/*  // pawns
   const players = state.players || [];
   players.forEach((p, idx) => {
     const pos = Number.isInteger(p.pos) ? p.pos : 0;
@@ -93,6 +93,62 @@ export function renderBoard(container, state, onClickSpace) {
     pawn.setAttribute("fill", idx === 0 ? "#ff3b3b" : "#ff9f1a"); // two-player friendly
     svg.appendChild(pawn);
   });
+*/
+// trucks (player pawns)
+const players = state.players || [];
+players.forEach((p, idx) => {
+  const pos = Number.isInteger(p.pos) ? p.pos : 0;
+  const [cx, cy] = trackToXY(pos);
 
+  const group = document.createElementNS(svgNS, "g");
+
+  // offset trucks so multiple players stack nicely
+  const offsetX = (idx % 3) * 18 - 18;
+  const offsetY = -38 - Math.floor(idx / 3) * 18;
+
+  group.setAttribute(
+    "transform",
+    `translate(${cx + offsetX}, ${cy + offsetY}) scale(0.9)`
+  );
+
+  // truck body
+  const body = document.createElementNS(svgNS, "rect");
+  body.setAttribute("x", -14);
+  body.setAttribute("y", -8);
+  body.setAttribute("width", 28);
+  body.setAttribute("height", 14);
+  body.setAttribute("rx", 3);
+  body.setAttribute("fill", idx === 0 ? "#ff3b3b" : "#ff9f1a");
+
+  // cab
+  const cab = document.createElementNS(svgNS, "rect");
+  cab.setAttribute("x", 4);
+  cab.setAttribute("y", -14);
+  cab.setAttribute("width", 14);
+  cab.setAttribute("height", 10);
+  cab.setAttribute("rx", 2);
+  cab.setAttribute("fill", idx === 0 ? "#ff6b6b" : "#ffc266");
+
+  // wheels
+  const wheel1 = document.createElementNS(svgNS, "circle");
+  wheel1.setAttribute("cx", -8);
+  wheel1.setAttribute("cy", 8);
+  wheel1.setAttribute("r", 4);
+  wheel1.setAttribute("fill", "#111");
+
+  const wheel2 = document.createElementNS(svgNS, "circle");
+  wheel2.setAttribute("cx", 10);
+  wheel2.setAttribute("cy", 8);
+  wheel2.setAttribute("r", 4);
+  wheel2.setAttribute("fill", "#111");
+
+  group.appendChild(body);
+  group.appendChild(cab);
+  group.appendChild(wheel1);
+  group.appendChild(wheel2);
+
+  svg.appendChild(group);
+});
+  
   container.appendChild(svg);
 }
