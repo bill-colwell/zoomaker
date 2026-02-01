@@ -13,8 +13,8 @@ function trackToXY(i) {
   return [px, py];
 }
 
-function shortType(type){
-  switch(type){
+function shortType(type) {
+  switch (type) {
     case "HOME": return "HOME";
     case "MARKET": return "MARKET";
     case "VET": return "VET";
@@ -25,6 +25,10 @@ function shortType(type){
     default: return "";
   }
 }
+
+// Up to 6 distinct truck colors
+const TRUCK_COLORS = ["#ff3b3b", "#ff9f1a", "#34c759", "#32ade6", "#af52de", "#ffd60a"];
+const CAB_COLORS   = ["#ff6b6b", "#ffc266", "#6eea94", "#7ad7ff", "#d7a6ff", "#fff2a8"];
 
 export function renderBoard(container, state, onClickSpace) {
   container.innerHTML = "";
@@ -67,7 +71,7 @@ export function renderBoard(container, state, onClickSpace) {
     n.textContent = String(i);
     svg.appendChild(n);
 
-    const tag = shortType(space.type);
+    const tag = shortType(space?.type);
     if (tag) {
       const t = document.createElementNS(svgNS, "text");
       t.setAttribute("x", cx);
@@ -80,75 +84,64 @@ export function renderBoard(container, state, onClickSpace) {
     }
   }
 
-/*  // pawns
+  // trucks (player pawns)
   const players = state.players || [];
   players.forEach((p, idx) => {
     const pos = Number.isInteger(p.pos) ? p.pos : 0;
     const [cx, cy] = trackToXY(pos);
 
-    const pawn = document.createElementNS(svgNS, "circle");
-    pawn.setAttribute("cx", cx + (idx % 3) * 12 - 12);
-    pawn.setAttribute("cy", cy - 30 - Math.floor(idx / 3) * 12);
-    pawn.setAttribute("r", 8);
-    pawn.setAttribute("fill", idx === 0 ? "#ff3b3b" : "#ff9f1a"); // two-player friendly
-    svg.appendChild(pawn);
+    const group = document.createElementNS(svgNS, "g");
+
+    // offset trucks so multiple players stack nicely
+    const offsetX = (idx % 3) * 18 - 18;
+    const offsetY = -38 - Math.floor(idx / 3) * 18;
+
+    group.setAttribute(
+      "transform",
+      `translate(${cx + offsetX}, ${cy + offsetY}) scale(0.9)`
+    );
+
+    const bodyColor = TRUCK_COLORS[idx % TRUCK_COLORS.length];
+    const cabColor = CAB_COLORS[idx % CAB_COLORS.length];
+
+    // truck body
+    const body = document.createElementNS(svgNS, "rect");
+    body.setAttribute("x", -14);
+    body.setAttribute("y", -8);
+    body.setAttribute("width", 28);
+    body.setAttribute("height", 14);
+    body.setAttribute("rx", 3);
+    body.setAttribute("fill", bodyColor);
+
+    // cab
+    const cab = document.createElementNS(svgNS, "rect");
+    cab.setAttribute("x", 4);
+    cab.setAttribute("y", -14);
+    cab.setAttribute("width", 14);
+    cab.setAttribute("height", 10);
+    cab.setAttribute("rx", 2);
+    cab.setAttribute("fill", cabColor);
+
+    // wheels
+    const wheel1 = document.createElementNS(svgNS, "circle");
+    wheel1.setAttribute("cx", -8);
+    wheel1.setAttribute("cy", 8);
+    wheel1.setAttribute("r", 4);
+    wheel1.setAttribute("fill", "#111");
+
+    const wheel2 = document.createElementNS(svgNS, "circle");
+    wheel2.setAttribute("cx", 10);
+    wheel2.setAttribute("cy", 8);
+    wheel2.setAttribute("r", 4);
+    wheel2.setAttribute("fill", "#111");
+
+    group.appendChild(body);
+    group.appendChild(cab);
+    group.appendChild(wheel1);
+    group.appendChild(wheel2);
+
+    svg.appendChild(group);
   });
-*/
-// trucks (player pawns)
-const players = state.players || [];
-players.forEach((p, idx) => {
-  const pos = Number.isInteger(p.pos) ? p.pos : 0;
-  const [cx, cy] = trackToXY(pos);
 
-  const group = document.createElementNS(svgNS, "g");
-
-  // offset trucks so multiple players stack nicely
-  const offsetX = (idx % 3) * 18 - 18;
-  const offsetY = -38 - Math.floor(idx / 3) * 18;
-
-  group.setAttribute(
-    "transform",
-    `translate(${cx + offsetX}, ${cy + offsetY}) scale(0.9)`
-  );
-
-  // truck body
-  const body = document.createElementNS(svgNS, "rect");
-  body.setAttribute("x", -14);
-  body.setAttribute("y", -8);
-  body.setAttribute("width", 28);
-  body.setAttribute("height", 14);
-  body.setAttribute("rx", 3);
-  body.setAttribute("fill", idx === 0 ? "#ff3b3b" : "#ff9f1a");
-
-  // cab
-  const cab = document.createElementNS(svgNS, "rect");
-  cab.setAttribute("x", 4);
-  cab.setAttribute("y", -14);
-  cab.setAttribute("width", 14);
-  cab.setAttribute("height", 10);
-  cab.setAttribute("rx", 2);
-  cab.setAttribute("fill", idx === 0 ? "#ff6b6b" : "#ffc266");
-
-  // wheels
-  const wheel1 = document.createElementNS(svgNS, "circle");
-  wheel1.setAttribute("cx", -8);
-  wheel1.setAttribute("cy", 8);
-  wheel1.setAttribute("r", 4);
-  wheel1.setAttribute("fill", "#111");
-
-  const wheel2 = document.createElementNS(svgNS, "circle");
-  wheel2.setAttribute("cx", 10);
-  wheel2.setAttribute("cy", 8);
-  wheel2.setAttribute("r", 4);
-  wheel2.setAttribute("fill", "#111");
-
-  group.appendChild(body);
-  group.appendChild(cab);
-  group.appendChild(wheel1);
-  group.appendChild(wheel2);
-
-  svg.appendChild(group);
-});
-  
   container.appendChild(svg);
 }
