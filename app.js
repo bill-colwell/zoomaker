@@ -23,12 +23,15 @@ const boardEl = document.getElementById("board");
 const btnCreate = document.getElementById("createGame");
 const btnJoin = document.getElementById("joinGame");
 const joinInput = document.getElementById("gameCodeInput");
+const gameMeta = document.getElementById("gameMeta");
 
-const btnRoll = document.getElementById("rollDice");
-const diceReadout = document.getElementById("diceReadout");
-const turnReadout = document.getElementById("turnReadout");
-const moneyReadout = document.getElementById("moneyReadout");
-const animalsReadout = document.getElementById("animalsReadout");
+const yourZooEl = document.getElementById("yourZoo");
+const moneyEl = document.getElementById("money");
+const animalsEl = document.getElementById("animals");
+
+const die1El = document.getElementById("die1");
+const die2El = document.getElementById("die2");
+const btnRoll = document.getElementById("rollDiceBtn");
 
 const eventTitle = document.getElementById("eventTitle");
 const eventBody = document.getElementById("eventBody");
@@ -40,20 +43,9 @@ function log(msg) {
   logEl.textContent = msg + "\n" + logEl.textContent;
 }
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-
-let playerId = null;
-let gameId = null;
-let unsub = null;
-let lastState = null;
-
-function setEnabled(on) {
-  btnCreate.disabled = !on;
-  btnJoin.disabled = !on;
-  joinInput.disabled = !on;
-  btnRoll.disabled = !on;
+function setEvent(title, body) {
+  eventTitle.textContent = title || "—";
+  eventBody.textContent = body || "—";
 }
 
 function setOfferButtons(enabled) {
@@ -61,9 +53,11 @@ function setOfferButtons(enabled) {
   btnSkip.disabled = !enabled;
 }
 
-function setEvent(title, body) {
-  eventTitle.textContent = title || "—";
-  eventBody.textContent = body || "—";
+function setEnabled(on) {
+  btnCreate.disabled = !on;
+  btnJoin.disabled = !on;
+  joinInput.disabled = !on;
+  btnRoll.disabled = !on;
 }
 
 function makeGameCode() {
@@ -77,27 +71,39 @@ function currentTurnPlayer(state) {
   const players = state.players || [];
   return players[state.turnIndex || 0] || null;
 }
-
-function myPlayer(state) {
-  return (state.players || []).find(p => p.id === playerId) || null;
+function myPlayer(state, myId) {
+  return (state.players || []).find(p => p.id === myId) || null;
 }
 
 function admissionForZoo(player) {
-  // Simple formula (tweak later): base 50 + 25 per animal
   const animals = player.animals || 0;
   return 50 + animals * 25;
 }
-
 function pickRandomOtherPlayer(players, meId) {
   const others = players.filter(p => p.id !== meId);
-  if (others.length === 0) return null;
+  if (!others.length) return null;
   return others[Math.floor(Math.random() * others.length)];
 }
-
 function pickAnimalOffer() {
   const rng = Math.floor(Math.random() * 1000000);
   return ANIMALS[rng % ANIMALS.length];
 }
+
+// Dice face helper
+const DICE_FACE = ["", "⚀","⚁","⚂","⚃","⚄","⚅"];
+function setDiceFaces(d1, d2){
+  die1El.textContent = DICE_FACE[d1] || d1;
+  die2El.textContent = DICE_FACE[d2] || d2;
+}
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+let playerId = null;
+let gameId = null;
+let unsub = null;
+let lastState = null;
 
 function watchGame(id) {
   if (unsub) unsub();
@@ -109,25 +115,23 @@ function watchGame(id) {
       statusEl.textContent = `Game ${gameId} not found`;
       return;
     }
-
     const state = snap.data();
     lastState = state;
 
     const players = state.players || [];
     const turnP = currentTurnPlayer(state);
-    const me = myPlayer(state);
+    const me = myPlayer(state, playerId);
 
-    statusEl.textContent = `Game ${gameId} • Players: ${players.length}`;
-    turnReadout.textContent = turnP ? (turnP.id === playerId ? "Your turn" : "Other player") : "—";
-    diceReadout.textContent = state.lastDice ? `${state.lastDice.d1} + ${state.lastDice.d2} = ${state.lastDice.total}` : "—";
+    statusEl.textContent = `Connected • ${turnP?.id === playerId ? "Your turn" : "Waiting…"}`;
+    gameMeta.textContent = `Game ${gameId} • Players: ${players.length}`;
 
     if (me) {
-      moneyReadout.textContent = me.money ?? 0;
-      animalsReadout.textContent = me.animals ?? 0;
-    } else {
-      moneyReadout.textContent = "—";
-      animalsReadout.textContent = "—";
+      yourZooEl.textContent = `Zoo ${Number.isInteger(me.homeZooIndex) ? (me.homeZooIndex + 1) : "—"}`;
+      moneyEl.textContent = me.money ?? 0;
+      animalsEl.textContent = me.animals ?? 0;
     }
+
+    if (state.lastDice?.d1) setDiceFaces(state.lastDice.d1, state.lastDice.d2);
 
     if (state.lastEvent?.title) setEvent(state.lastEvent.title, state.lastEvent.body);
 
@@ -141,7 +145,7 @@ function watchGame(id) {
       setEvent("Animal Market Offer", `Buy a ${offer.animal.name} for $${offer.animal.cost}? (Tier +${offer.animal.tier})`);
     } else {
       setOfferButtons(false);
-      btnRoll.disabled = !(isMyTurn && !offer);
+      btnRoll.disabled = !isMyTurn || !!offer;
     }
 
     renderBoard(boardEl, state, async () => {});
@@ -162,7 +166,7 @@ async function createGame() {
 
   const state = {
     createdAt: serverTimestamp(),
-    version: 4,
+    version: 5,
     players: [{
       id: playerId,
       pos: 0,
@@ -173,13 +177,12 @@ async function createGame() {
     }],
     turnIndex: 0,
     lastDice: null,
-    lastEvent: { title: "Welcome to Zoomaker!", body: "Roll dice to start building your zoo." },
+    lastEvent: { title: "Welcome to Zoomaker!", body: "Roll the dice to start building your zoo." },
     pendingOffer: null
   };
 
   await setDoc(ref, state);
   joinInput.value = code;
-  log(`Created game ${code}`);
   watchGame(code);
 }
 
@@ -196,9 +199,8 @@ async function joinGame() {
 
   if (!players.some(p => p.id === playerId)) {
     if (players.length >= 6) { alert("Game full (max 6)."); return; }
-
-    // Assign next available home zoo based on join order
     const homeZooIndex = players.length; // 0..5
+
     players.push({
       id: playerId,
       pos: 0,
@@ -209,9 +211,6 @@ async function joinGame() {
     });
 
     await updateDoc(ref, { players });
-    log(`Joined game ${code} as Zoo ${homeZooIndex + 1}`);
-  } else {
-    log(`Rejoined game ${code}`);
   }
 
   watchGame(code);
@@ -219,6 +218,24 @@ async function joinGame() {
 
 async function rollDice() {
   if (!gameId) { alert("Create or join a game first."); return; }
+
+  // ✅ animate dice in the UI first
+  die1El.classList.add("rolling");
+  die2El.classList.add("rolling");
+
+  // quick “fake tumble” faces
+  let ticks = 0;
+  const timer = setInterval(() => {
+    const a = 1 + Math.floor(Math.random() * 6);
+    const b = 1 + Math.floor(Math.random() * 6);
+    setDiceFaces(a, b);
+    ticks++;
+    if (ticks >= 7) clearInterval(timer);
+  }, 60);
+
+  // then do the real transaction after a short delay
+  await new Promise(r => setTimeout(r, 520));
+
   const ref = doc(db, "games", gameId);
 
   await runTransaction(db, async (tx) => {
@@ -227,11 +244,10 @@ async function rollDice() {
 
     const state = snap.data();
     const players = [...(state.players || [])];
-    if (players.length === 0) return;
+    if (!players.length) return;
 
     const turnP = currentTurnPlayer(state);
     if (!turnP || turnP.id !== playerId) return;
-
     if (state.pendingOffer) return;
 
     const d1 = 1 + Math.floor(Math.random() * 6);
@@ -250,35 +266,30 @@ async function rollDice() {
     let pendingOffer = null;
     let turnIndex = state.turnIndex || 0;
 
-    // --- Space effects ---
     if (space.type === "TIP") {
       const amt = space.data.amount || 50;
       players[idx] = { ...players[idx], money: (players[idx].money || 0) + amt };
       lastEvent = { title: "Tip Jar!", body: `Visitors tipped you $${amt}.` };
       turnIndex = (turnIndex + 1) % players.length;
     }
-
     else if (space.type === "VET") {
       const amt = space.data.amount || 120;
       players[idx] = { ...players[idx], money: (players[idx].money || 0) - amt };
       lastEvent = { title: "Vet Clinic", body: `Animal checkup: Pay $${amt}.` };
       turnIndex = (turnIndex + 1) % players.length;
     }
-
     else if (space.type === "RUNAWAY") {
       const amt = space.data.amount || 150;
       players[idx] = { ...players[idx], money: (players[idx].money || 0) - amt };
       lastEvent = { title: "Runaway!", body: `Hire a capture crew: Pay $${amt}.` };
       turnIndex = (turnIndex + 1) % players.length;
     }
-
     else if (space.type === "ACCIDENT") {
       const amt = space.data.amount || 200;
       players[idx] = { ...players[idx], money: (players[idx].money || 0) - amt };
       lastEvent = { title: "Zoo Accident", body: `Repairs & liability: Pay $${amt}.` };
       turnIndex = (turnIndex + 1) % players.length;
     }
-
     else if (space.type === "DONATION") {
       const amt = space.data.amountFromEach || 50;
       let gained = 0;
@@ -291,39 +302,26 @@ async function rollDice() {
       lastEvent = { title: "Donation Day!", body: `Each other player pays you $${amt} (you gained $${gained}).` };
       turnIndex = (turnIndex + 1) % players.length;
     }
-
     else if (space.type === "MARKET") {
       const animal = pickAnimalOffer();
       pendingOffer = { forPlayerId: playerId, animal, createdAt: Date.now() };
       lastEvent = { title: "Animal Market", body: `Offer: ${animal.name} for $${animal.cost} (Tier +${animal.tier}).` };
-      // do NOT advance turn until resolved
     }
-
-    // ✅ Zoo Visit Zone: random opponent zoo + admission
     else if (space.type === "ZOO_ZONE") {
       const target = pickRandomOtherPlayer(players, playerId);
       if (!target) {
         lastEvent = { title: "Zoo Visit Zone", body: "No other players yet — nobody to visit." };
       } else {
         const fee = admissionForZoo(target);
-        const payerMoney = players[idx].money || 0;
-
-        // Pay fee
-        players[idx] = { ...players[idx], money: payerMoney - fee };
-
+        players[idx] = { ...players[idx], money: (players[idx].money || 0) - fee };
         const tIdx = players.findIndex(p => p.id === target.id);
         players[tIdx] = { ...players[tIdx], money: (players[tIdx].money || 0) + fee };
-
-        lastEvent = {
-          title: "Zoo Visit!",
-          body: `You visited Zoo ${target.homeZooIndex + 1} and paid $${fee} admission (based on ${target.animals || 0} animals).`
-        };
+        lastEvent = { title: "Zoo Visit!", body: `Random visit: Zoo ${target.homeZooIndex + 1} • Admission $${fee}` };
       }
       turnIndex = (turnIndex + 1) % players.length;
     }
-
     else {
-      lastEvent = { title: space.name, body: `Nothing special happened. Next player!` };
+      lastEvent = { title: space.name, body: "Nothing special happened. Next player!" };
       turnIndex = (turnIndex + 1) % players.length;
     }
 
@@ -336,7 +334,9 @@ async function rollDice() {
     });
   });
 
-  log("Rolled dice");
+  // stop animation
+  die1El.classList.remove("rolling");
+  die2El.classList.remove("rolling");
 }
 
 async function resolveOffer(buy) {
@@ -384,11 +384,9 @@ async function resolveOffer(buy) {
       turnIndex: nextTurn
     });
   });
-
-  log(buy ? "Bought animal" : "Skipped animal");
 }
 
-// boot
+// Boot
 statusEl.textContent = "Signing in…";
 setEnabled(false);
 setOfferButtons(false);
@@ -397,16 +395,18 @@ setEvent("Zoomaker", "Sign in…");
 signInAnonymously(auth)
   .then((res) => {
     playerId = res.user.uid;
-    statusEl.textContent = "Connected (anonymous) • Ready";
-    log("Signed in ✅");
+    statusEl.textContent = "Connected • Ready";
     setEnabled(true);
+    setDiceFaces(1, 1);
 
     btnCreate.onclick = () => createGame().catch(e => log("CREATE ERROR: " + e.message));
     btnJoin.onclick = () => joinGame().catch(e => log("JOIN ERROR: " + e.message));
-    btnRoll.onclick = () => rollDice().catch(e => log("DICE ERROR: " + e.message));
+    btnRoll.onclick = () => rollDice().catch(e => log("ROLL ERROR: " + e.message));
 
     btnBuy.onclick = () => resolveOffer(true).catch(e => log("BUY ERROR: " + e.message));
     btnSkip.onclick = () => resolveOffer(false).catch(e => log("SKIP ERROR: " + e.message));
+
+    log("Signed in ✅");
   })
   .catch((err) => {
     statusEl.textContent = `Auth error: ${err.code}`;
