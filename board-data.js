@@ -1,16 +1,12 @@
-export const BOARD = {
-  tiles: [
-    { id: 0, neighbors: [1] },
-    { id: 1, neighbors: [0,2] },
-    { id: 2, neighbors: [1,3] },
-    { id: 3, neighbors: [2,4] },
-    { id: 4, neighbors: [3] }
-  ],
-  pos: {
-    0:[0,0],
-    1:[1,0],
-    2:[2,0],
-    3:[3,0],
-    4:[4,0]
-  }
+// Simple loop track for v1 (easy to expand later into splits)
+export const TRACK_LENGTH = 30;
+
+// Optional: label some spaces now (we'll add real Zoomaker events later)
+export const SPACE_TYPES = {
+  0:  "HOME",
+  5:  "ANIMAL_BUY",
+  10: "VET",
+  15: "TIP",
+  20: "ACCIDENT",
+  25: "RUNAWAY"
 };
