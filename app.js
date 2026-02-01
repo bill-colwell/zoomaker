@@ -5,6 +5,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
+import { BOARD } from "./board-data.js";
+import { renderBoard } from "./board-render.js";
+
 // --- Local config ---
 import { firebaseConfig } from "./firebase-config.js";
 
@@ -34,6 +37,19 @@ signInAnonymously(auth)
 const createBtn = document.getElementById("createGame");
 const joinBtn = document.getElementById("joinGame");
 const gameCodeInput = document.getElementById("gameCodeInput");
+const boardEl = document.getElementById("board");
+
+// Minimal local state just to prove rendering
+const state = {
+  players: [{ id: "you", tileId: 0 }],
+  pendingChoices: []
+};
+
+renderBoard(boardEl, state, (tileId) => {
+  console.log("Clicked tile", tileId);
+});
+
+
 
 if (createBtn) {
   createBtn.addEventListener("click", () => {
