@@ -1,82 +1,33 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Zoomaker Online</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <title>Zoomaker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-  <header>
-    <h1>ZOOMAKER (Online Prototype)</h1>
-    <div id="status">Not connected</div>
-  </header>
 
-  <main>
-    <section class="card">
-      <h2>Start / Join</h2>
+<header>
+  <h1>ZOOMAKER</h1>
+  <div id="status">Loading…</div>
+</header>
 
-      <div class="row">
-        <button id="btnCreate">Create Game</button>
-      </div>
+<section class="card">
+  <button id="createGame">Create Game</button>
+  <input id="gameCodeInput" placeholder="Game code">
+  <button id="joinGame">Join Game</button>
+</section>
 
-      <div class="row">
-        <input id="joinCode" placeholder="Enter game code" />
-        <button id="btnJoin">Join Game</button>
-      </div>
+<section class="card">
+  <h2>Board</h2>
+  <div id="board"></div>
+</section>
 
-      <div class="row small">
-        <div><b>Game Code:</b> <span id="gameCode">—</span></div>
-        <div><b>You are:</b> <span id="playerId">—</span></div>
-      </div>
-    </section>
+<section class="card">
+  <pre id="log"></pre>
+</section>
 
-    <section class="card">
-      <h2>Board</h2>
-      <div id="board"></div>
-      <div class="small">If a fork appears, tap a highlighted tile.</div>
-    </section>
-    
-    <section class="card">
-      <h2>Turn</h2>
-      <div class="row">
-        <div><b>Current Turn:</b> <span id="turnPlayer">—</span></div>
-        <div><b>Turn #:</b> <span id="turnNum">—</span></div>
-      </div>
-
-      <div class="row">
-        <button id="btnRoll" disabled>Roll Dice</button>
-        <div class="big" id="rollResult">—</div>
-      </div>
-
-      <div class="row">
-        <div><b>Your Money:</b> $<span id="money">—</span></div>
-        <div><b>Your Tier Points:</b> <span id="tiers">—</span></div>
-      </div>
-
-      <div class="row">
-        <div><b>Tile:</b> <span id="tile">—</span></div>
-        <div><b>Carrying:</b> <span id="carrying">—</span></div>
-      </div>
-
-      <div class="row">
-        <div><b>Log</b></div>
-      </div>
-      <pre id="log"></pre>
-    </section>
-
-    <section class="card">
-      <h2>Next (v1)</h2>
-      <ul>
-        <li>Add board UI (tiles + forks)</li>
-        <li>Animal Market buy + hauling</li>
-        <li>Zoo zone visit die + admission</li>
-        <li>Event deck draws</li>
-      </ul>
-    </section>
-  </main>
-
-  <script type="module" src="app.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
