@@ -1,8 +1,8 @@
 import { TRACK_LENGTH } from "./board-data.js";
 
-const RENDER_VERSION = "PICKUP-DIR-1";
+const RENDER_VERSION = "PICKUP-CORRECT-2";
 
-// Colors for up to 6 players
+// Up to 6 distinct colors
 const BODY_COLORS = ["#ff3b3b", "#ff9f1a", "#34c759", "#32ade6", "#af52de", "#ffd60a"];
 const CAB_COLORS  = ["#ff6b6b", "#ffc266", "#6eea94", "#7ad7ff", "#d7a6ff", "#fff2a8"];
 
@@ -16,25 +16,35 @@ function trackToXY(i) {
   return [55 + x * 55, 60 + y * 55];
 }
 
-// 30-space rectangle loop headings
-function headingForSpace(i) {
-  if (i <= 9) return 0;       // top row → right
-  if (i <= 14) return 90;     // right column → down
-  if (i <= 24) return 180;    // bottom row → left
-  return 270;                 // left column → up
+// Which edge of the loop is a space on?
+function edgeForSpace(i) {
+  if (i <= 9) return "TOP";
+  if (i <= 14) return "RIGHT";
+  if (i <= 24) return "BOTTOM";
+  return "LEFT";
 }
 
-function drawPickup(svg, svgNS, x, y, deg, bodyColor, cabColor) {
+function drawPickup(svg, svgNS, x, y, edge, bodyColor, cabColor) {
   const g = document.createElementNS(svgNS, "g");
 
-  // Draw the truck centered near (0,0), then rotate, then place at (x,y).
-  // Order matters (right-to-left), so this effectively is:
-  // 1) shift truck up a hair for nicer centering
-  // 2) rotate the truck
-  // 3) place it on the board
-  g.setAttribute("transform", `translate(${x}, ${y}) rotate(${deg}) translate(0, -2)`);
+  // Keep the truck upright everywhere:
+  // - TOP: normal (faces right)
+  // - RIGHT: rotate 90 (faces down)
+  // - BOTTOM: mirror horizontally (faces left, wheels stay down)
+  // - LEFT: rotate 270 (faces up)
+  //
+  // We also add a small translate(0,-2) for better centering above the space.
+  if (edge === "TOP") {
+    g.setAttribute("transform", `translate(${x}, ${y}) translate(0, -2)`);
+  } else if (edge === "RIGHT") {
+    g.setAttribute("transform", `translate(${x}, ${y}) rotate(90) translate(0, -2)`);
+  } else if (edge === "BOTTOM") {
+    g.setAttribute("transform", `translate(${x}, ${y}) scale(-1, 1) translate(0, -2)`);
+  } else { // LEFT
+    g.setAttribute("transform", `translate(${x}, ${y}) rotate(270) translate(0, -2)`);
+  }
 
-  // --- Pickup (blocky, short-bed) ---
+  // --- Pickup (blocky, short-bed), designed facing RIGHT ---
   // Bed
   const bed = document.createElementNS(svgNS, "rect");
   bed.setAttribute("x", -18);
@@ -53,7 +63,7 @@ function drawPickup(svg, svgNS, x, y, deg, bodyColor, cabColor) {
   cab.setAttribute("rx", 3);
   cab.setAttribute("fill", cabColor);
 
-  // Hood
+  // Hood (front)
   const hood = document.createElementNS(svgNS, "rect");
   hood.setAttribute("x", 12);
   hood.setAttribute("y", 0);
@@ -62,16 +72,16 @@ function drawPickup(svg, svgNS, x, y, deg, bodyColor, cabColor) {
   hood.setAttribute("rx", 2);
   hood.setAttribute("fill", bodyColor);
 
-  // Window
+  // Windshield/window: moved FORWARD so it’s not backwards
   const win = document.createElementNS(svgNS, "rect");
-  win.setAttribute("x", -2);
+  win.setAttribute("x", 3);       // <-- forward (toward hood)
   win.setAttribute("y", -4);
   win.setAttribute("width", 8);
   win.setAttribute("height", 5);
   win.setAttribute("rx", 1);
   win.setAttribute("fill", "#d9ecff");
 
-  // Wheels
+  // Wheels (kept at bottom for upright look)
   const w1 = document.createElementNS(svgNS, "circle");
   w1.setAttribute("cx", -10);
   w1.setAttribute("cy", 10);
@@ -102,7 +112,6 @@ export function renderBoard(container, state, onClickSpace) {
   svg.setAttribute("width", "100%");
   svg.setAttribute("viewBox", "0 0 650 420");
 
-  // background
   const bg = document.createElementNS(svgNS, "rect");
   bg.setAttribute("x", 0);
   bg.setAttribute("y", 0);
@@ -111,7 +120,7 @@ export function renderBoard(container, state, onClickSpace) {
   bg.setAttribute("fill", "#0c1530");
   svg.appendChild(bg);
 
-  // version stamp (useful for cache sanity)
+  // version stamp (helps with cache confusion)
   const ver = document.createElementNS(svgNS, "text");
   ver.setAttribute("x", 12);
   ver.setAttribute("y", 18);
@@ -151,16 +160,16 @@ export function renderBoard(container, state, onClickSpace) {
     const pos = Number.isInteger(p.pos) ? p.pos : 0;
     const [cx, cy] = trackToXY(pos);
 
-    // stack offsets so multiple players don’t overlap
+    // stacking offsets so multiple players don't overlap
     const offsetX = (idx % 3) * 18 - 18;
     const offsetY = -46 - Math.floor(idx / 3) * 18;
 
-    const deg = headingForSpace(pos);
+    const edge = edgeForSpace(pos);
 
     drawPickup(
       svg, svgNS,
       cx + offsetX, cy + offsetY,
-      deg,
+      edge,
       BODY_COLORS[idx % BODY_COLORS.length],
       CAB_COLORS[idx % CAB_COLORS.length]
     );
