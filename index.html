@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Zoomaker</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
@@ -15,8 +15,16 @@
 
 <section class="card">
   <button id="createGame">Create Game</button>
-  <input id="gameCodeInput" placeholder="Game code">
+  <input id="gameCodeInput" placeholder="Game code" autocapitalize="characters" />
   <button id="joinGame">Join Game</button>
+</section>
+
+<section class="card">
+  <div class="row">
+    <button id="rollDice">Roll Dice</button>
+    <div class="pill">Dice: <span id="diceReadout">—</span></div>
+    <div class="pill">Turn: <span id="turnReadout">—</span></div>
+  </div>
 </section>
 
 <section class="card">
