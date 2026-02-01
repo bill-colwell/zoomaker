@@ -32,7 +32,6 @@ const animalsReadout = document.getElementById("animalsReadout");
 
 const eventTitle = document.getElementById("eventTitle");
 const eventBody = document.getElementById("eventBody");
-const eventBox = document.getElementById("eventBox");
 const btnBuy = document.getElementById("buyAnimal");
 const btnSkip = document.getElementById("skipAnimal");
 
@@ -62,6 +61,11 @@ function setOfferButtons(enabled) {
   btnSkip.disabled = !enabled;
 }
 
+function setEvent(title, body) {
+  eventTitle.textContent = title || "—";
+  eventBody.textContent = body || "—";
+}
+
 function makeGameCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let out = "";
@@ -74,13 +78,25 @@ function currentTurnPlayer(state) {
   return players[state.turnIndex || 0] || null;
 }
 
-function myPlayer(state){
+function myPlayer(state) {
   return (state.players || []).find(p => p.id === playerId) || null;
 }
 
-function setEvent(title, body){
-  eventTitle.textContent = title || "—";
-  eventBody.textContent = body || "—";
+function admissionForZoo(player) {
+  // Simple formula (tweak later): base 50 + 25 per animal
+  const animals = player.animals || 0;
+  return 50 + animals * 25;
+}
+
+function pickRandomOtherPlayer(players, meId) {
+  const others = players.filter(p => p.id !== meId);
+  if (others.length === 0) return null;
+  return others[Math.floor(Math.random() * others.length)];
+}
+
+function pickAnimalOffer() {
+  const rng = Math.floor(Math.random() * 1000000);
+  return ANIMALS[rng % ANIMALS.length];
 }
 
 function watchGame(id) {
@@ -113,30 +129,22 @@ function watchGame(id) {
       animalsReadout.textContent = "—";
     }
 
-    // show last event
-    if (state.lastEvent?.title) {
-      setEvent(state.lastEvent.title, state.lastEvent.body);
-    }
+    if (state.lastEvent?.title) setEvent(state.lastEvent.title, state.lastEvent.body);
 
-    // offer UI
     const offer = state.pendingOffer || null;
     const offerForMe = offer && offer.forPlayerId === playerId;
     const isMyTurn = turnP && turnP.id === playerId;
 
     if (offerForMe && isMyTurn) {
       setOfferButtons(true);
-      btnRoll.disabled = true; // must resolve offer first
-      setEvent("Animal Market Offer",
-        `Buy a ${offer.animal.name} for $${offer.animal.cost}? (Tier +${offer.animal.tier})`);
+      btnRoll.disabled = true;
+      setEvent("Animal Market Offer", `Buy a ${offer.animal.name} for $${offer.animal.cost}? (Tier +${offer.animal.tier})`);
     } else {
       setOfferButtons(false);
-      // roll button is enabled only if in game & your turn
       btnRoll.disabled = !(isMyTurn && !offer);
     }
 
-    renderBoard(boardEl, state, async () => {
-      // clicking spaces is disabled for gameplay now (dice controls movement)
-    });
+    renderBoard(boardEl, state, async () => {});
   });
 
   log(`Watching game ${gameId}`);
@@ -154,8 +162,15 @@ async function createGame() {
 
   const state = {
     createdAt: serverTimestamp(),
-    version: 3,
-    players: [{ id: playerId, pos: 0, money: 1500, animals: 0, tierPoints: 0 }],
+    version: 4,
+    players: [{
+      id: playerId,
+      pos: 0,
+      money: 1500,
+      animals: 0,
+      tierPoints: 0,
+      homeZooIndex: 0
+    }],
     turnIndex: 0,
     lastDice: null,
     lastEvent: { title: "Welcome to Zoomaker!", body: "Roll dice to start building your zoo." },
@@ -181,19 +196,25 @@ async function joinGame() {
 
   if (!players.some(p => p.id === playerId)) {
     if (players.length >= 6) { alert("Game full (max 6)."); return; }
-    players.push({ id: playerId, pos: 0, money: 1500, animals: 0, tierPoints: 0 });
+
+    // Assign next available home zoo based on join order
+    const homeZooIndex = players.length; // 0..5
+    players.push({
+      id: playerId,
+      pos: 0,
+      money: 1500,
+      animals: 0,
+      tierPoints: 0,
+      homeZooIndex
+    });
+
     await updateDoc(ref, { players });
-    log(`Joined game ${code}`);
+    log(`Joined game ${code} as Zoo ${homeZooIndex + 1}`);
   } else {
     log(`Rejoined game ${code}`);
   }
 
   watchGame(code);
-}
-
-function pickAnimalOffer(rng){
-  // rng is integer 0..(ANIMALS.length-1)
-  return ANIMALS[rng % ANIMALS.length];
 }
 
 async function rollDice() {
@@ -211,7 +232,7 @@ async function rollDice() {
     const turnP = currentTurnPlayer(state);
     if (!turnP || turnP.id !== playerId) return;
 
-    if (state.pendingOffer) return; // must resolve offer first
+    if (state.pendingOffer) return;
 
     const d1 = 1 + Math.floor(Math.random() * 6);
     const d2 = 1 + Math.floor(Math.random() * 6);
@@ -225,12 +246,11 @@ async function rollDice() {
 
     const space = getSpace(next);
 
-    // Default event outcome
     let lastEvent = { title: `Landed on: ${space.name}`, body: `Space ${next} • ${space.type}` };
     let pendingOffer = null;
     let turnIndex = state.turnIndex || 0;
 
-    // Apply space effects
+    // --- Space effects ---
     if (space.type === "TIP") {
       const amt = space.data.amount || 50;
       players[idx] = { ...players[idx], money: (players[idx].money || 0) + amt };
@@ -261,7 +281,6 @@ async function rollDice() {
 
     else if (space.type === "DONATION") {
       const amt = space.data.amountFromEach || 50;
-      // everyone pays active player (including active pays 0)
       let gained = 0;
       for (let p = 0; p < players.length; p++) {
         if (p === idx) continue;
@@ -274,15 +293,36 @@ async function rollDice() {
     }
 
     else if (space.type === "MARKET") {
-      // create an offer; do NOT advance turn until resolved
-      const rng = Math.floor(Math.random() * 1000000);
-      const animal = pickAnimalOffer(rng);
+      const animal = pickAnimalOffer();
       pendingOffer = { forPlayerId: playerId, animal, createdAt: Date.now() };
-      lastEvent = { title: "Animal Market", body: `Offer available: ${animal.name} for $${animal.cost} (Tier +${animal.tier}).` };
+      lastEvent = { title: "Animal Market", body: `Offer: ${animal.name} for $${animal.cost} (Tier +${animal.tier}).` };
+      // do NOT advance turn until resolved
+    }
+
+    // ✅ Zoo Visit Zone: random opponent zoo + admission
+    else if (space.type === "ZOO_ZONE") {
+      const target = pickRandomOtherPlayer(players, playerId);
+      if (!target) {
+        lastEvent = { title: "Zoo Visit Zone", body: "No other players yet — nobody to visit." };
+      } else {
+        const fee = admissionForZoo(target);
+        const payerMoney = players[idx].money || 0;
+
+        // Pay fee
+        players[idx] = { ...players[idx], money: payerMoney - fee };
+
+        const tIdx = players.findIndex(p => p.id === target.id);
+        players[tIdx] = { ...players[tIdx], money: (players[tIdx].money || 0) + fee };
+
+        lastEvent = {
+          title: "Zoo Visit!",
+          body: `You visited Zoo ${target.homeZooIndex + 1} and paid $${fee} admission (based on ${target.animals || 0} animals).`
+        };
+      }
+      turnIndex = (turnIndex + 1) % players.length;
     }
 
     else {
-      // PATH/HOME do nothing, advance turn
       lastEvent = { title: space.name, body: `Nothing special happened. Next player!` };
       turnIndex = (turnIndex + 1) % players.length;
     }
@@ -352,7 +392,6 @@ async function resolveOffer(buy) {
 statusEl.textContent = "Signing in…";
 setEnabled(false);
 setOfferButtons(false);
-
 setEvent("Zoomaker", "Sign in…");
 
 signInAnonymously(auth)
