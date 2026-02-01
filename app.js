@@ -34,6 +34,15 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
+signInAnonymously(auth)
+  .then(() => {
+    document.getElementById("status").textContent = "Connected (anonymous)";
+  })
+  .catch((error) => {
+    console.error("Auth error:", error);
+    document.getElementById("status").textContent = "Auth error";
+  });
+
 // ---------- UI ----------
 const el = (id) => document.getElementById(id);
 const logEl = el("log");
